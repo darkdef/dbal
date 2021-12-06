@@ -1,2 +1,2 @@
-# dba
-Yii database access library
+# DBAL
+Yii database access library (based on yiisoft/db)
