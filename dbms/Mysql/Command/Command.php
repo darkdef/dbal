@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Yiisoft\DbalMysql\Command;
 
+use Exception;
+use PDO;
+use PDOStatement;
+
 use Yiisoft\Dbal\Command\CommandInterface;
 use Yiisoft\Dbal\Command\ValueInterface;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
 use Yiisoft\Dbal\Connection\ConnectionPdoInterface;
-
-use Exception;
-use PDO;
-use PDOStatement;
 use Yiisoft\Dbal\Type\IntType;
 use Yiisoft\Dbal\Type\StringType;
 
@@ -38,7 +38,7 @@ final class Command implements CommandInterface
 
         $this->db = $db;
         if ($sql !== null) {
-            $this->sql = $this->quoteSql($sql);
+            $this->sql = $this->db->getQuoter()->quoteSql($sql);
         }
 
         $this->bindValues($params);
@@ -49,7 +49,7 @@ final class Command implements CommandInterface
      */
     public function setSql(string $sql): CommandInterface
     {
-        $this->sql = $this->quoteSql($sql);
+        $this->sql = $this->db->getQuoter()->quoteSql($sql);
         return $this;
     }
 
@@ -156,22 +156,6 @@ final class Command implements CommandInterface
         return array_map(static function(ValueInterface $value) {
             return $value->getValue();
         }, $this->params);
-    }
-
-    private function quoteSql(string $sql): string
-    {
-        return preg_replace_callback(
-            '/({{(%?[\w\-. ]+%?)}}|\\[\\[([\w\-. ]+)]])/',
-            function ($matches) {
-                return '`' . $matches[2] . '`';
-//                if (isset($matches[3])) {
-//                    return $this->quoteColumnName($matches[3]);
-//                }
-
-//                return str_replace('%', $this->tablePrefix, $this->quoteTableName($matches[2]));
-            },
-            $sql
-        );
     }
 
     public function queryOne()

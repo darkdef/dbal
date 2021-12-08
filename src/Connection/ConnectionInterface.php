@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Yiisoft\Dbal\Connection;
 
 use Yiisoft\Dbal\Command\CommandInterface;
+use Yiisoft\Dbal\Schema\QuoterInterface;
 use Yiisoft\Dbal\Schema\SchemaInterface;
 use Yiisoft\Dbal\Transaction\TransactionInterface;
 
@@ -19,6 +20,12 @@ interface ConnectionInterface
      * @return CommandInterface the DB command
      */
     public function createCommand(?string $sql = null, array $params = []): CommandInterface;
+
+    public function getQuoter(): QuoterInterface;
+
+    public function getTablePrefix(): string;
+
+    public function setTablePrefix(string $value);
 
     /**
      * Returns the name of the DB driver.

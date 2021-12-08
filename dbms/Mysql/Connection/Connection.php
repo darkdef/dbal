@@ -6,9 +6,11 @@ namespace Yiisoft\DbalMysql\Connection;
 
 use Yiisoft\Dbal\Command\CommandInterface;
 use Yiisoft\Dbal\Connection\ConnectionPdoInterface;
-
+use Yiisoft\Dbal\Schema\QuoterInterface;
 use Yiisoft\Dbal\Transaction\TransactionInterface;
+
 use Yiisoft\DbalMysql\Command\Command;
+use Yiisoft\DbalMysql\Schema\Quoter;
 
 use \PDO;
 
@@ -24,6 +26,10 @@ final class Connection implements ConnectionPdoInterface
 
     private ?array $options;
 
+    private string $tablePrefix = '';
+
+    private QuoterInterface $quoter;
+
     public function __construct(string $dsn, ?string $username = null, ?string $password = null, ?array $options = null)
     {
         $this->dsn = $dsn;
@@ -35,6 +41,25 @@ final class Connection implements ConnectionPdoInterface
     public function createCommand(?string $sql = null, array $params = []): CommandInterface
     {
         return new Command($this, $sql, $params);
+    }
+
+    public function getQuoter(): QuoterInterface
+    {
+        if (!$this->quoter) {
+            $this->quoter = new Quoter($this);
+        }
+
+        return $this->quoter;
+    }
+
+    public function getTablePrefix(): string
+    {
+        return $this->tablePrefix;
+    }
+
+    public function setTablePrefix(string $value): void
+    {
+        $this->tablePrefix = $value;
     }
 
     public function getDriverName(): string
