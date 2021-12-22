@@ -17,17 +17,11 @@ use \PDO;
 final class Connection implements ConnectionPdoInterface
 {
     private ?PDO $pdo = null;
-
     private string $dsn;
-
     private ?string $username;
-
     private ?string $password;
-
     private ?array $options;
-
     private string $tablePrefix = '';
-
     private QuoterInterface $quoter;
 
     public function __construct(string $dsn, ?string $username = null, ?string $password = null, ?array $options = null)
@@ -45,7 +39,7 @@ final class Connection implements ConnectionPdoInterface
 
     public function getQuoter(): QuoterInterface
     {
-        if (!$this->quoter) {
+        if (empty($this->quoter)) {
             $this->quoter = new Quoter($this);
         }
 
