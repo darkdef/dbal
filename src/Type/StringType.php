@@ -10,6 +10,9 @@ final class StringType implements TypeInterface
 
     private $dbValue = null;
 
+    /**
+     * @inheritDoc
+     */
     public function getPhpValue($value)
     {
         if ($this->phpValue === $value) {
@@ -23,6 +26,9 @@ final class StringType implements TypeInterface
         return $this->phpValue;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getDbValue($value)
     {
         if ($this->dbValue === $value) {
@@ -36,8 +42,12 @@ final class StringType implements TypeInterface
         return $this->dbValue;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function getDbValueAsString($value): string
     {
+        /** @psalm-var string */
         $value = $this->getDbValue($value);
 
         return sprintf('\'%s\'', $value);
