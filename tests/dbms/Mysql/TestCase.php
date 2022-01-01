@@ -6,6 +6,7 @@ namespace Yiisoft\DbalMysql\Tests;
 
 use PHPUnit\Framework\TestCase as AbstractTestCase;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
+use Yiisoft\Dbal\Exception\Exception;
 use Yiisoft\DbalMysql\Connection\Connection;
 
 class TestCase extends AbstractTestCase
@@ -23,12 +24,32 @@ class TestCase extends AbstractTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->connection = new Connection(self::DB_DSN, self::DB_USERNAME, self::DB_PASSWORD);
+        $this->connection = $this->createConnection();
 //        $this->connection->setCharset(self::DB_CHARSET);
     }
 
-    public function getConnection(): ConnectionInterface
+    protected function createConnection(): ?ConnectionInterface
     {
+        return new Connection(self::DB_DSN, self::DB_USERNAME, self::DB_PASSWORD);
+    }
+
+
+    public function getConnection($reset = false): ConnectionInterface
+    {
+        if ($reset !== false) {
+            if ($this->connection) {
+                $this->connection->close();
+            }
+
+            $this->connection = $this->createConnection();
+
+            try {
+                $this->prepareDatabase();
+            } catch (Exception $e) {
+                $this->markTestSkipped('Something wrong when preparing database: ' . $e->getMessage());
+            }
+        }
+
         return $this->connection;
     }
 

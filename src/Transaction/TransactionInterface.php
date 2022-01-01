@@ -4,8 +4,38 @@ declare(strict_types=1);
 
 namespace Yiisoft\Dbal\Transaction;
 
+use Throwable;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
+use Yiisoft\Dbal\Exception\Exception;
+use Yiisoft\Dbal\Exception\InvalidConfigException;
 
+/**
+ * Transaction represents a DB transaction.
+ *
+ * It is usually created by calling {@see Connection::beginTransaction()}.
+ *
+ * The following code is a typical example of using transactions (note that some DBMS may not support transactions):
+ *
+ * ```php
+ * $transaction = $connection->beginTransaction();
+ * try {
+ *     $connection->createCommand($sql1)->execute();
+ *     $connection->createCommand($sql2)->execute();
+ *     //.... other SQL executions
+ *     $transaction->commit();
+ * } catch (\Throwable $e) {
+ *     $transaction->rollBack();
+ *     throw $e;
+ * }
+ * ```
+ *
+ * @property bool $isActive Whether this transaction is active. Only an active transaction can {@see commit()} or
+ * {@see rollBack()}. This property is read-only.
+ * @property string $isolationLevel The transaction isolation level to use for this transaction. This can be one of
+ * {@see READ_UNCOMMITTED}, {@see READ_COMMITTED}, {@see REPEATABLE_READ} and {@see SERIALIZABLE} but also a string
+ * containing DBMS specific syntax to be used after `SET TRANSACTION ISOLATION LEVEL`. This property is write-only.
+ * @property int $level The current nesting level of the transaction. This property is read-only.
+ */
 interface TransactionInterface
 {
     /**
@@ -39,8 +69,6 @@ interface TransactionInterface
     public function __construct(ConnectionInterface $db);
 
     public function isActive(): bool;
-
-    public function transaction(callable $callback, string $isolationLevel = null);
 
     /**
      * Begins a transaction.
@@ -78,4 +106,36 @@ interface TransactionInterface
      * @return int the nesting level of the transaction. 0 means the outermost level.
      */
     public function getLevel(): int;
+
+    /**
+     * Creates a new savepoint.
+     *
+     * @param string $name the savepoint name
+     *
+     * @throws Exception|InvalidConfigException|Throwable
+     */
+    public function createSavepoint(string $name): void;
+
+    /**
+     * Releases an existing savepoint.
+     *
+     * @param string $name the savepoint name
+     *
+     * @throws Exception|InvalidConfigException|Throwable
+     */
+    public function releaseSavepoint(string $name): void;
+
+    /**
+     * Rolls back to a previously created savepoint.
+     *
+     * @param string $name the savepoint name
+     *
+     * @throws Exception|InvalidConfigException|Throwable
+     */
+    public function rollBackSavepoint(string $name): void;
+
+    /**
+     * @return bool whether this DBMS supports [savepoint](http://en.wikipedia.org/wiki/Savepoint).
+     */
+    public function supportsSavepoint(): bool;
 }

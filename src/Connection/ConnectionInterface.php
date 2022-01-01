@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Yiisoft\Dbal\Connection;
 
+use Throwable;
 use Yiisoft\Dbal\Command\CommandInterface;
 use Yiisoft\Dbal\Schema\QuoterInterface;
 use Yiisoft\Dbal\Schema\SchemaInterface;
@@ -78,5 +79,25 @@ interface ConnectionInterface
      *
      * @return TransactionInterface the transaction initiated
      */
-//    public function beginTransaction(string $isolationLevel = null): TransactionInterface;
+    public function beginTransaction(string $isolationLevel = null): TransactionInterface;
+
+    /**
+     * Executes callback provided in a transaction.
+     *
+     * @param callable $callback a valid PHP callback that performs the job. Accepts connection instance as parameter.
+     * @param string|null $isolationLevel The isolation level to use for this transaction. {@see Transaction::begin()}
+     * for details.
+     *
+     *@throws Throwable if there is any exception during query. In this case the transaction will be rolled back.
+     *
+     * @return mixed result of callback function
+     */
+    public function transaction(callable $callback, string $isolationLevel = null);
+
+    /**
+     * Returns the currently active transaction.
+     *
+     * @return TransactionInterface|null the currently active transaction. Null if no active transaction.
+     */
+    public function getTransaction(): ?TransactionInterface;
 }
