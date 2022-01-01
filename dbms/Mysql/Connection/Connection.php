@@ -34,7 +34,7 @@ final class Connection implements ConnectionPdoInterface
     private ?array $options;
     private string $tablePrefix = '';
     private QuoterInterface $quoter;
-    private ?TransactionInterface $transaction;
+    private ?TransactionInterface $transaction = null;
 
     public function __construct(string $dsn, ?string $username = null, ?string $password = null, ?array $options = null)
     {
