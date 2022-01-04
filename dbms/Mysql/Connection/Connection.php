@@ -10,16 +10,19 @@ use Psr\Log\LogLevel;
 use Throwable;
 use \PDO;
 
+use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Exception\InvalidConfigException;
 use Yiisoft\Dbal\AwareTrait\LoggerAwareTrait;
 use Yiisoft\Dbal\AwareTrait\ProfilerAwareTrait;
 use Yiisoft\Dbal\Command\CommandInterface;
 use Yiisoft\Dbal\Connection\ConnectionPdoInterface;
 use Yiisoft\Dbal\Schema\QuoterInterface;
+use Yiisoft\Dbal\Schema\SchemaInterface;
 use Yiisoft\Dbal\Transaction\TransactionInterface;
 
 use Yiisoft\DbalMysql\Command\Command;
 use Yiisoft\DbalMysql\Schema\Quoter;
+use Yiisoft\DbalMysql\Schema\AbstractSchema;
 use Yiisoft\DbalMysql\Transaction\Transaction;
 
 final class Connection implements ConnectionPdoInterface
@@ -33,8 +36,12 @@ final class Connection implements ConnectionPdoInterface
     private ?string $password;
     private ?array $options;
     private string $tablePrefix = '';
+
     private QuoterInterface $quoter;
     private ?TransactionInterface $transaction = null;
+    private ?SchemaInterface $schema = null;
+
+    private ?SchemaCache $schemaCache = null;
 
     public function __construct(string $dsn, ?string $username = null, ?string $password = null, ?array $options = null)
     {
@@ -71,6 +78,25 @@ final class Connection implements ConnectionPdoInterface
     public function getDriverName(): string
     {
         return 'mysql';
+    }
+
+    public function getDsn(): string
+    {
+        return $this->dsn;
+    }
+
+    public function getUsername(): ?string
+    {
+        return $this->username;
+    }
+
+    public function getSchema(): SchemaInterface
+    {
+        if (empty($this->schema)) {
+            $this->schema = new AbstractSchema($this, $this->schemaCache);
+        }
+
+        return $this->schema;
     }
 
     public function getServerVersion(): string
@@ -181,6 +207,14 @@ final class Connection implements ConnectionPdoInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function setSchemaCache(?SchemaCache $schemaCache): void
+    {
+        $this->schemaCache = $schemaCache;
     }
 
     /**

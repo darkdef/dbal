@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Yiisoft\Dbal\Connection;
 
 use Throwable;
+use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Command\CommandInterface;
 use Yiisoft\Dbal\Schema\QuoterInterface;
 use Yiisoft\Dbal\Schema\SchemaInterface;
@@ -36,11 +37,26 @@ interface ConnectionInterface
     public function getDriverName(): string;
 
     /**
+     * @return string the Data Source Name, or DSN, contains the information required to connect to the database.
+     *
+     * Please refer to the [PHP manual](https://secure.php.net/manual/en/pdo.construct.php) on the format of the DSN
+     * string.
+     *
+     * For [SQLite](https://secure.php.net/manual/en/ref.pdo-sqlite.connection.php) you may use a
+     * [path alias](guide:concept-aliases) for specifying the database path, e.g. `sqlite:@app/data/db.sql`.
+     *
+     * {@see charset}
+     */
+    public function getDsn(): string;
+
+    public function getUsername(): ?string;
+
+    /**
      * Returns the schema information for the database opened by this connection.
      *
      * @return SchemaInterface the schema information for the database opened by this connection.
      */
-//    public function getSchema(): SchemaInterface;
+    public function getSchema(): SchemaInterface;
 
     /**
      * Returns a server version as a string comparable by {@see \version_compare()}.
@@ -100,4 +116,9 @@ interface ConnectionInterface
      * @return TransactionInterface|null the currently active transaction. Null if no active transaction.
      */
     public function getTransaction(): ?TransactionInterface;
+
+    /**
+     * @param SchemaCache|null $schemaCache
+     */
+    public function setSchemaCache(?SchemaCache $schemaCache): void;
 }
