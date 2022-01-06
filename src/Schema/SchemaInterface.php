@@ -6,12 +6,10 @@ namespace Yiisoft\Dbal\Schema;
 
 use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
-use Yiisoft\Dbal\Exception\Exception;
-use Yiisoft\Dbal\Exception\InvalidConfigException;
+use Yiisoft\Dbal\Constraint\ConstraintFinderInterface;
 use Yiisoft\Dbal\Exception\NotSupportedException;
-use Throwable;
 
-interface SchemaInterface
+interface SchemaInterface extends ConstraintFinderInterface
 {
     public const TYPE_PK = 'pk';
     public const TYPE_UPK = 'upk';
@@ -120,45 +118,5 @@ interface SchemaInterface
      */
     public function refreshTableSchema(string $name): void;
 
-    /**
-     * Returns all unique indexes for the given table.
-     *
-     * Each array element is of the following structure:
-     *
-     * ```php
-     * [
-     *     'IndexName1' => ['col1' [, ...]],
-     *     'IndexName2' => ['col2' [, ...]],
-     * ]
-     * ```
-     *
-     * @param TableSchemaInterface $table the table metadata.
-     *
-     * @throws Exception|InvalidConfigException|Throwable
-     *
-     * @return array all unique indexes for the given table.
-     */
-    public function findUniqueIndexes(TableSchemaInterface $table): array;
-
     public function getDefaultSchema(): ?string;
-
-    /**
-     * Creates a query builder for the MySQL database.
-     *
-     * @return QueryBuilder query builder instance
-     */
-//    public function createQueryBuilder(): QueryBuilder;
-
-    /**
-     * Create a column schema builder instance giving the type and value precision.
-     *
-     * This method may be overridden by child classes to create a DBMS-specific column schema builder.
-     *
-     * @param string $type type of the column. See {@see ColumnSchemaBuilder::$type}.
-     * @param array|int|string $length length or precision of the column. See {@see ColumnSchemaBuilder::$length}.
-     *
-     * @return ColumnSchemaBuilder column schema builder instance
-     */
-//    public function createColumnSchemaBuilder(string $type, $length = null): ColumnSchemaBuilder;
-
 }

@@ -8,8 +8,11 @@ use Throwable;
 use Yiisoft\Cache\Dependency\TagDependency;
 use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
+use Yiisoft\Dbal\Constraint\ConstraintFinder;
+use Yiisoft\Dbal\Constraint\ConstraintFinderInterface;
+use Yiisoft\Dbal\Exception\NotSupportedException;
 
-class AbstractSchema implements SchemaInterface
+abstract class AbstractSchema extends ConstraintFinder implements SchemaInterface
 {
     /**
      * Schema cache version, to detect incompatibilities in cached values when the data format of the cache changes.
@@ -22,6 +25,11 @@ class AbstractSchema implements SchemaInterface
     protected array $schemaNames = [];
     protected array $tableNames = [];
     protected array $tableMetadata = [];
+
+    /**
+     * @var string|null the default schema name used for the current session.
+     */
+    protected ?string $defaultSchema = null;
 
     public function __construct(ConnectionInterface $connection, ?SchemaCache $schemaCache = null)
     {
@@ -46,6 +54,57 @@ class AbstractSchema implements SchemaInterface
     public function getTableSchema(string $name, bool $refresh = false): ?TableSchemaInterface
     {
         return $this->getTableMetadata($name, 'schema', $refresh);
+    }
+
+    public function getTableSchemas(string $schema = '', bool $refresh = false): array
+    {
+        return $this->getSchemaMetadata($schema, 'schema', $refresh);
+    }
+
+    public function getSchemaNames(bool $refresh = false): array
+    {
+        if (empty($this->schemaNames) || $refresh) {
+            $this->schemaNames = $this->findSchemaNames();
+        }
+
+        return $this->schemaNames;
+    }
+
+    public function getTableNames(string $schema = '', bool $refresh = false): array
+    {
+        if (!isset($this->tableNames[$schema]) || $refresh) {
+            $this->tableNames[$schema] = $this->findTableNames($schema);
+        }
+
+        return $this->tableNames[$schema];
+    }
+
+    public function refresh(): void
+    {
+        if ($this->schemaCache && $this->schemaCache->isEnabled()) {
+            $this->schemaCache->invalidate($this->getCacheTag());
+        }
+
+        $this->tableNames = [];
+        $this->tableMetadata = [];
+    }
+
+    public function refreshTableSchema(string $name): void
+    {
+        $rawName = $this->getRawTableName($name);
+
+        unset($this->tableMetadata[$rawName]);
+
+        $this->tableNames = [];
+
+        if ($this->schemaCache && $this->schemaCache->isEnabled()) {
+            $this->schemaCache->remove($this->getCacheKey($rawName));
+        }
+    }
+
+    public function getDefaultSchema(): ?string
+    {
+        return $this->defaultSchema;
     }
 
     /**
@@ -77,103 +136,39 @@ class AbstractSchema implements SchemaInterface
     }
 
     /**
-     * Tries to load and populate table metadata from cache.
+     * Returns the metadata of the given type for all tables in the given schema.
      *
-     * @param string $rawName
-     */
-    private function loadTableMetadataFromCache(string $rawName): void
-    {
-        if (empty($this->schemaCache)) {
-            $this->tableMetadata[$rawName] = [];
-            return;
-        }
-
-        if (!$this->schemaCache->isEnabled() || $this->schemaCache->isExcluded($rawName)) {
-            $this->tableMetadata[$rawName] = [];
-            return;
-        }
-
-        $metadata = $this->schemaCache->getOrSet(
-            $this->getCacheKey($rawName),
-            null,
-            $this->schemaCache->getDuration(),
-            new TagDependency($this->getCacheTag()),
-        );
-
-        if (
-            !is_array($metadata) ||
-            !isset($metadata['cacheVersion']) ||
-            $metadata['cacheVersion'] !== static::SCHEMA_CACHE_VERSION
-        ) {
-            $this->tableMetadata[$rawName] = [];
-
-            return;
-        }
-
-        unset($metadata['cacheVersion']);
-        $this->tableMetadata[$rawName] = $metadata;
-    }
-
-    /**
-     * Saves table metadata to cache.
+     * This method will call a `'getTable' . ucfirst($type)` named method with the table name and the refresh flag to
+     * obtain the metadata.
      *
-     * @param string $rawName
+     * @param string $schema the schema of the metadata. Defaults to empty string, meaning the current or default schema
+     * name.
+     * @param string $type metadata type.
+     * @param bool $refresh whether to fetch the latest available table metadata. If this is `false`, cached data may be
+     * returned if available.
+     *
+     * @throws NotSupportedException
+     *
+     * @return array array of metadata.
      */
-    private function saveTableMetadataToCache(string $rawName): void
+    protected function getSchemaMetadata(string $schema, string $type, bool $refresh): array
     {
-        if (empty($this->schemaCache)) {
-            return;
+        $metadata = [];
+        $methodName = 'getTable' . ucfirst($type);
+
+        foreach ($this->getTableNames($schema, $refresh) as $name) {
+            if ($schema !== '') {
+                $name = $schema . '.' . $name;
+            }
+
+            $tableMetadata = $this->$methodName($name, $refresh);
+
+            if ($tableMetadata !== null) {
+                $metadata[] = $tableMetadata;
+            }
         }
 
-        if ($this->schemaCache->isEnabled() === false || $this->schemaCache->isExcluded($rawName) === true) {
-            return;
-        }
-
-        $metadata = $this->tableMetadata[$rawName];
-
-        $metadata['cacheVersion'] = static::SCHEMA_CACHE_VERSION;
-
-        $this->schemaCache->set(
-            $this->getCacheKey($rawName),
-            $metadata,
-            $this->schemaCache->getDuration(),
-            new TagDependency($this->getCacheTag()),
-        );
-    }
-
-    public function getTableSchemas(string $schema = '', bool $refresh = false): array
-    {
-        // TODO: Implement getTableSchemas() method.
-    }
-
-    public function getSchemaNames(bool $refresh = false): array
-    {
-        // TODO: Implement getSchemaNames() method.
-    }
-
-    public function getTableNames(string $schema = '', bool $refresh = false): array
-    {
-        // TODO: Implement getTableNames() method.
-    }
-
-    public function refresh(): void
-    {
-        // TODO: Implement refresh() method.
-    }
-
-    public function refreshTableSchema(string $name): void
-    {
-        // TODO: Implement refreshTableSchema() method.
-    }
-
-    public function findUniqueIndexes(TableSchemaInterface $table): array
-    {
-        // TODO: Implement findUniqueIndexes() method.
-    }
-
-    public function getDefaultSchema(): ?string
-    {
-        // TODO: Implement getDefaultSchema() method.
+        return $metadata;
     }
 
     /**
@@ -207,5 +202,93 @@ class AbstractSchema implements SchemaInterface
             $this->connection->getDsn(),
             $this->connection->getUsername(),
         ]));
+    }
+
+    /**
+     * Returns all schema names in the database, including the default one but not system schemas.
+     *
+     * This method should be overridden by child classes in order to support this feature because the default
+     * implementation simply throws an exception.
+     *
+     * @throws NotSupportedException if this method is not supported by the DBMS.
+     *
+     * @return array all schema names in the database, except system schemas.
+     */
+    protected function findSchemaNames(): array
+    {
+        throw new NotSupportedException(static::class . ' does not support fetching all schema names.');
+    }
+
+    /**
+     * Returns all table names in the database.
+     *
+     * This method should be overridden by child classes in order to support this feature because the default
+     * implementation simply throws an exception.
+     *
+     * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
+     *
+     * @throws NotSupportedException if this method is not supported by the DBMS.
+     *
+     * @return array all table names in the database. The names have NO schema name prefix.
+     */
+    protected function findTableNames(string $schema = ''): array
+    {
+        throw new NotSupportedException(static::class . ' does not support fetching all table names.');
+    }
+
+    /**
+     * Tries to load and populate table metadata from cache.
+     *
+     * @param string $rawName
+     */
+    private function loadTableMetadataFromCache(string $rawName): void
+    {
+        if (empty($this->schemaCache) || !$this->schemaCache->isEnabled() || $this->schemaCache->isExcluded($rawName)) {
+            $this->tableMetadata[$rawName] = [];
+            return;
+        }
+
+        $metadata = $this->schemaCache->getOrSet(
+            $this->getCacheKey($rawName),
+            null,
+            $this->schemaCache->getDuration(),
+            new TagDependency($this->getCacheTag()),
+        );
+
+        if (
+            !is_array($metadata) ||
+            !isset($metadata['cacheVersion']) ||
+            $metadata['cacheVersion'] !== static::SCHEMA_CACHE_VERSION
+        ) {
+            $this->tableMetadata[$rawName] = [];
+
+            return;
+        }
+
+        unset($metadata['cacheVersion']);
+        $this->tableMetadata[$rawName] = $metadata;
+    }
+
+    /**
+     * Saves table metadata to cache.
+     *
+     * @param string $rawName
+     */
+    private function saveTableMetadataToCache(string $rawName): void
+    {
+        if (empty($this->schemaCache) || $this->schemaCache->isEnabled() === false || $this->schemaCache->isExcluded($rawName) === true) {
+            return;
+        }
+
+        $metadata = $this->tableMetadata[$rawName];
+
+        $metadata['cacheVersion'] = static::SCHEMA_CACHE_VERSION;
+
+        $this->schemaCache->set(
+            $this->getCacheKey($rawName),
+            $metadata,
+            $this->schemaCache->getDuration(),
+            new TagDependency($this->getCacheTag()),
+        );
     }
 }
