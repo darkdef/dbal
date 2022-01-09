@@ -22,7 +22,7 @@ use Yiisoft\Dbal\Transaction\TransactionInterface;
 
 use Yiisoft\DbalMysql\Command\Command;
 use Yiisoft\DbalMysql\Schema\Quoter;
-use Yiisoft\DbalMysql\Schema\AbstractSchema;
+use Yiisoft\DbalMysql\Schema\Schema;
 use Yiisoft\DbalMysql\Transaction\Transaction;
 
 final class Connection implements ConnectionPdoInterface
@@ -93,7 +93,7 @@ final class Connection implements ConnectionPdoInterface
     public function getSchema(): SchemaInterface
     {
         if (empty($this->schema)) {
-            $this->schema = new AbstractSchema($this, $this->schemaCache);
+            $this->schema = new Schema($this, $this->schemaCache);
         }
 
         return $this->schema;
@@ -163,11 +163,12 @@ final class Connection implements ConnectionPdoInterface
         }
     }
 
-    public function getPdo(): \PDO
+    public function getPdo(): ?PDO
     {
         if ($this->pdo === null) {
             throw new \Exception('PDO not initialized');
         }
+
         return $this->pdo;
     }
 

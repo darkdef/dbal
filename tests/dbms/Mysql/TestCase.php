@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace Yiisoft\DbalMysql\Tests;
 
 use PHPUnit\Framework\TestCase as AbstractTestCase;
+use Yiisoft\Cache\ArrayCache;
+use Yiisoft\Cache\Cache;
+use Yiisoft\Cache\CacheInterface;
+use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
+use Yiisoft\Dbal\Connection\ConnectionPdoInterface;
 use Yiisoft\Dbal\Exception\Exception;
 use Yiisoft\DbalMysql\Connection\Connection;
 
@@ -19,22 +24,42 @@ class TestCase extends AbstractTestCase
     protected const DB_PASSWORD = '';
     protected const DB_CHARSET = 'UTF8MB4';
 
+    protected ?CacheInterface $cache = null;
     protected ConnectionInterface $connection;
+    protected ?SchemaCache $schemaCache = null;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->createSchemaCache();
+
         $this->connection = $this->createConnection();
+        $this->connection->setSchemaCache($this->schemaCache);
 //        $this->connection->setCharset(self::DB_CHARSET);
     }
 
-    protected function createConnection(): ?ConnectionInterface
+    protected function createConnection(): ?ConnectionPdoInterface
     {
         return new Connection(self::DB_DSN, self::DB_USERNAME, self::DB_PASSWORD);
     }
 
+    protected function createSchemaCache(): SchemaCache
+    {
+        if ($this->schemaCache === null) {
+            $this->schemaCache = new SchemaCache($this->createCache());
+        }
+        return $this->schemaCache;
+    }
 
-    public function getConnection($reset = false): ConnectionInterface
+    protected function createCache(): Cache
+    {
+        if ($this->cache === null) {
+            $this->cache = new Cache(new ArrayCache());
+        }
+        return $this->cache;
+    }
+
+    public function getConnection($reset = false): ConnectionPdoInterface
     {
         if ($reset !== false) {
             if ($this->connection) {

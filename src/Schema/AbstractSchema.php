@@ -8,6 +8,7 @@ use Throwable;
 use Yiisoft\Cache\Dependency\TagDependency;
 use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
+use Yiisoft\Dbal\Connection\ConnectionPdoInterface;
 use Yiisoft\Dbal\Constraint\ConstraintFinder;
 use Yiisoft\Dbal\Constraint\ConstraintFinderInterface;
 use Yiisoft\Dbal\Exception\NotSupportedException;
@@ -19,7 +20,10 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
      */
     protected const SCHEMA_CACHE_VERSION = 1;
 
-    protected ConnectionInterface $connection;
+    /**
+     * @var ConnectionInterface|ConnectionPdoInterface
+     */
+    protected $connection;
     protected ?SchemaCache $schemaCache;
 
     protected array $schemaNames = [];
@@ -290,5 +294,21 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
             $this->schemaCache->getDuration(),
             new TagDependency($this->getCacheTag()),
         );
+    }
+
+    /**
+     * Resolves the table name and schema name (if any).
+     *
+     * @param string $name the table name.
+     *
+     * @throws NotSupportedException if this method is not supported by the DBMS.
+     *
+     * @return TableSchemaInterface with resolved table, schema, etc. names.
+     *
+     * {@see \Yiisoft\Dbal\Schema\TableSchemaInterface}
+     */
+    protected function resolveTableName(string $name): TableSchemaInterface
+    {
+        throw new NotSupportedException(static::class . ' does not support resolving table names.');
     }
 }

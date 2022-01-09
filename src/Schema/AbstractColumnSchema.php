@@ -9,12 +9,14 @@ use Yiisoft\Dbal\Type\TypeInterface;
 /**
  * ColumnSchema class describes the metadata of a column in a database table.
  */
-class ColumnSchema implements ColumnSchemaInterface
+class AbstractColumnSchema implements ColumnSchemaInterface
 {
-    private TypeInterface $type;
+    // @todo temporarily is null
+    private ?TypeInterface $type = null;
 
     private string $name;
     private bool $allowNull;
+    private string $dbType;
     private $defaultValue;
     private ?array $enumValues = null;
     private ?int $size = null;
@@ -35,17 +37,21 @@ class ColumnSchema implements ColumnSchemaInterface
         $this->type = $value;
     }
 
-    /**
-     * @return string name of this column (without quotes).
-     */
+    public function dbType(string $value): void
+    {
+        $this->dbType = $value;
+    }
+
+    public function getDbType(): string
+    {
+        return $this->dbType;
+    }
+
     public function getName(): string
     {
         return $this->name;
     }
 
-    /**
-     * @return bool whether this column can be null.
-     */
     public function isAllowNull(): bool
     {
         return $this->allowNull;
