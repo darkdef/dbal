@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Yiisoft\Dbal\Schema;
 
-use Throwable;
 use Yiisoft\Cache\Dependency\TagDependency;
 use Yiisoft\Dbal\Cache\SchemaCache;
 use Yiisoft\Dbal\Connection\ConnectionInterface;
 use Yiisoft\Dbal\Connection\ConnectionPdoInterface;
+use Yiisoft\Dbal\Constraint\Constraint;
 use Yiisoft\Dbal\Constraint\ConstraintFinder;
-use Yiisoft\Dbal\Constraint\ConstraintFinderInterface;
+use Yiisoft\Dbal\Constraint\ConstraintInterface;
 use Yiisoft\Dbal\Exception\NotSupportedException;
 
 abstract class AbstractSchema extends ConstraintFinder implements SchemaInterface
@@ -114,7 +114,7 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
     /**
      * Returns the metadata of the given type for the given table.
      *
-     * If there's no metadata in the cache, this method will call a `'loadTable' . ucfirst($type)` named method with the
+     * If there's no metadata in the cache, this method will call a loadTableType method with the
      * table name to obtain the metadata.
      *
      * @param string $name table name. The table name may contain schema name if any. Do not quote the table name.
@@ -132,7 +132,7 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
         }
 
         if ($refresh || !array_key_exists($type, $this->tableMetadata[$rawName])) {
-            $this->tableMetadata[$rawName][$type] = $this->{'loadTable' . ucfirst($type)}($rawName);
+            $this->tableMetadata[$rawName][$type] = $this->loadTableType($type, $rawName);
             $this->saveTableMetadataToCache($rawName);
         }
 
@@ -141,9 +141,6 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
 
     /**
      * Returns the metadata of the given type for all tables in the given schema.
-     *
-     * This method will call a `'getTable' . ucfirst($type)` named method with the table name and the refresh flag to
-     * obtain the metadata.
      *
      * @param string $schema the schema of the metadata. Defaults to empty string, meaning the current or default schema
      * name.
@@ -158,14 +155,13 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
     protected function getSchemaMetadata(string $schema, string $type, bool $refresh): array
     {
         $metadata = [];
-        $methodName = 'getTable' . ucfirst($type);
 
         foreach ($this->getTableNames($schema, $refresh) as $name) {
             if ($schema !== '') {
                 $name = $schema . '.' . $name;
             }
 
-            $tableMetadata = $this->$methodName($name, $refresh);
+            $tableMetadata = $this->getTableType($type, $name, $refresh);
 
             if ($tableMetadata !== null) {
                 $metadata[] = $tableMetadata;
@@ -310,5 +306,45 @@ abstract class AbstractSchema extends ConstraintFinder implements SchemaInterfac
     protected function resolveTableName(string $name): TableSchemaInterface
     {
         throw new NotSupportedException(static::class . ' does not support resolving table names.');
+    }
+
+    /**
+     * This method will call a `'loadTable' . ucfirst($type)` named method with the table name to obtain the metadata.
+     *
+     * @param string $type
+     * @param string $name
+     * @return array|Constraint|null
+     */
+    protected function loadTableType(string $type, string $name): array|Constraint|null
+    {
+        return match ($type) {
+            ConstraintInterface::PRIMARY_KEY => $this->loadTablePrimaryKey($name),
+            ConstraintInterface::UNIQUES => $this->loadTableUniques($name),
+            ConstraintInterface::FOREIGN_KEYS => $this->loadTableForeignKeys($name),
+            ConstraintInterface::INDEXES => $this->loadTableIndexes($name),
+            ConstraintInterface::DEFAULT_VALUES => $this->loadTableDefaultValues($name),
+            ConstraintInterface::CHECKS => $this->loadTableChecks($name),
+        };
+    }
+
+    /**
+     * This method will call a `'getTable' . ucfirst($type)` named method with the table name and the refresh flag to
+     * obtain the metadata.
+     *
+     * @param string $type
+     * @param string $name
+     * @param bool $refresh
+     * @return array|Constraint|null
+     */
+    protected function getTableType(string $type, string $name, bool $refresh = false): array|Constraint|null
+    {
+        return match ($type) {
+            ConstraintInterface::PRIMARY_KEY => $this->getTablePrimaryKey($name, $refresh),
+            ConstraintInterface::UNIQUES => $this->getTableUniques($name, $refresh),
+            ConstraintInterface::FOREIGN_KEYS => $this->getTableForeignKeys($name, $refresh),
+            ConstraintInterface::INDEXES => $this->getTableIndexes($name, $refresh),
+            ConstraintInterface::DEFAULT_VALUES => $this->getTableDefaultValues($name, $refresh),
+            ConstraintInterface::CHECKS => $this->getTableChecks($name, $refresh),
+        };
     }
 }

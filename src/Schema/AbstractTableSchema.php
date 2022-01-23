@@ -21,6 +21,7 @@ abstract class AbstractTableSchema implements TableSchemaInterface
     private ?string $sequenceName = null;
     private array $primaryKey = [];
     private array $columns = [];
+    private array $foreignKeys = [];
 
     /**
      * @inheritDoc
@@ -135,5 +136,25 @@ abstract class AbstractTableSchema implements TableSchemaInterface
     public function columns(string $index, ColumnSchemaInterface $value): void
     {
         $this->columns[$index] = $value;
+    }
+
+    public function getForeignKeys(): array
+    {
+        return $this->foreignKeys;
+    }
+
+    public function compositeFK(int $id, string $from, string $to): void
+    {
+        $this->foreignKeys[$id][$from] = $to;
+    }
+
+    public function foreignKey(string $id, array $to): void
+    {
+        $this->foreignKeys[$id] = $to;
+    }
+
+    public function foreignKeys(array $value): void
+    {
+        $this->foreignKeys = $value;
     }
 }

@@ -80,4 +80,23 @@ interface TableSchemaInterface
     public function primaryKey(string $value): void;
 
     public function columns(string $index, ColumnSchemaInterface $value): void;
+
+    /**
+     * @return array foreign keys of this table. Each array element is of the following structure:
+     *
+     * ```php
+     * [
+     *  'ForeignTableName',
+     *  'fk1' => 'pk1',  // pk1 is in foreign table
+     *  'fk2' => 'pk2',  // if composite foreign key
+     * ]
+     * ```
+     */
+    public function getForeignKeys(): array;
+
+    public function compositeFK(int $id, string $from, string $to): void;
+
+    public function foreignKey(string $id, array $to): void;
+
+    public function foreignKeys(array $value): void;
 }
